@@ -1,14 +1,14 @@
 use bevy::{
-    ecs::system::Command, platform::collections::{HashMap, HashSet}, prelude::*, tasks::{AsyncComputeTaskPool, Task}
+    platform::collections::{HashMap, HashSet},
+    prelude::*,
+    tasks::{AsyncComputeTaskPool, Task},
 };
 use futures_lite::future;
-use std::{
-    fmt::Debug,
-    hash::Hash,
-    ops::{Add, Sub},
-};
+use std::{fmt::Debug, hash::Hash};
 
-use crate::core::basics::{Point, TILE_SIZE_IN_UNITS}; // For polling tasks
+use crate::core::basics::{
+    DEFAULT_CHUNK_DIMENSION_TILES, DEFAULT_RENDER_DISTANCE_CHUNKS, Point, TILE_SIZE_IN_UNITS,
+}; // For polling tasks
 
 use std::sync::Arc;
 
@@ -23,10 +23,7 @@ use bevy::{
     transform::components::Transform,
 };
 
-use crate::{
-    Player,
-    core::*
-};
+use crate::Player;
 
 /// Absolute chunk coordinates.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Reflect, Component)]
@@ -35,7 +32,6 @@ pub struct ChunkCoords {
     pub x: isize,
     pub y: isize,
 }
-
 
 impl ChunkCoords {
     /// Converts a world tile `Point` to `ChunkCoords`.
@@ -70,7 +66,6 @@ impl ChunkCoords {
         )
     }
 }
-
 
 pub trait GridData: Send + Sync + 'static + Debug + Clone {
     type Item: Copy + Debug + Default; // Default trait required for new()
@@ -167,9 +162,12 @@ pub trait MapDataProducer: Send + Sync + 'static + Clone {
 
     /// Generates a chunk of data for the given coordinates.
     /// Returns the DataChunk asset.
-    fn generate_chunk(&self, coords: ChunkCoords, dimension_tiles: u32) -> DataChunk<Self::GridType>;
+    fn generate_chunk(
+        &self,
+        coords: ChunkCoords,
+        dimension_tiles: u32,
+    ) -> DataChunk<Self::GridType>;
 }
-
 
 /// The central resource for managing a chunked map of type T.
 #[derive(Resource)]
@@ -364,7 +362,6 @@ impl<P: MapDataProducer> DataMap<P> {
     }
 }
 
-
 // System to manage loading/unloading based on a focus point (e.g., player/camera)
 pub fn data_map_load_unload_system<P: MapDataProducer>(
     player_query: Query<&Transform, With<Player>>,
@@ -509,4 +506,32 @@ pub fn data_map_process_completed_tasks_system<P: MapDataProducer>(
 
         data_map.loaded_chunks.insert(coords, chunk);
     }
+}
+
+pub fn insert_chunked_plugin<P>(
+    app: &mut bevy::prelude::App,
+    producer: P,
+    manhattan_distance_tiles_init: usize,
+) -> &mut bevy::prelude::App
+where
+    P: MapDataProducer + Send + Sync + Clone + 'static,
+    <P as MapDataProducer>::GridType: Send + Sync,
+    <P as MapDataProducer>::Item: Send + Copy + Default + Sync,
+{
+    app.add_systems(Startup, move |mut map: ResMut<DataMap<P>>| {
+        map.init(manhattan_distance_tiles_init)
+    });
+    app.insert_resource(DataMap::<P>::new(
+        producer,
+        DEFAULT_CHUNK_DIMENSION_TILES,
+        DEFAULT_RENDER_DISTANCE_CHUNKS,
+    ))
+    .add_systems(
+        Update,
+        (
+            data_map_load_unload_system::<P>,
+            data_map_spawn_tasks_system::<P>,
+            data_map_process_completed_tasks_system::<P>,
+        ),
+    )
 }
