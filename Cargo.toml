@@ -1,0 +1,9 @@
+[package]
+name = "rust-sim"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bevy = "0.16.1"
+futures-lite = "2.6.0"
+rand = "0.9.1"
