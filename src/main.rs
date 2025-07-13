@@ -21,18 +21,7 @@ use bevy::{
     transform::components::{GlobalTransform, Transform},
 };
 
-use crate::core::{
-    basics::{
-        ChunkCoords, DEFAULT_CHUNK_DIMENSION_TILES, DEFAULT_RENDER_DISTANCE_CHUNKS, DataChunk,
-        FlatGrid, GAME_WORLD_CENTER_THRESHOLD, GridData, Point, TILE_SIZE_IN_UNITS,
-    },
-    data_map_producer::MapDataProducer,
-    data_map_resource::DataMap,
-    data_map_systems::{
-        data_map_load_unload_system, data_map_process_completed_tasks_system,
-        data_map_spawn_tasks_system,
-    },
-};
+use crate::core::{basics::{Point, DEFAULT_CHUNK_DIMENSION_TILES, DEFAULT_RENDER_DISTANCE_CHUNKS, GAME_WORLD_CENTER_THRESHOLD, TILE_SIZE_IN_UNITS}, chunks::{data_map_load_unload_system, data_map_process_completed_tasks_system, data_map_spawn_tasks_system, ChunkCoords, DataChunk, DataMap, FlatGrid, GridData, MapDataProducer}};
 
 pub mod core;
 
