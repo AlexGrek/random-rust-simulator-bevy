@@ -6,8 +6,11 @@ use bevy::{
 use futures_lite::future;
 use std::{fmt::Debug, hash::Hash};
 
-use crate::core::basics::{
-    DEFAULT_CHUNK_DIMENSION_TILES, DEFAULT_RENDER_DISTANCE_CHUNKS, Point, TILE_SIZE_IN_UNITS,
+use crate::{
+    core::{basics::{
+         Point, DEFAULT_RENDER_DISTANCE_CHUNKS
+    }, constants::{DEFAULT_CHUNK_DIMENSION_TILES, TILE_SIZE_IN_UNITS}, units::{TilesCount}},
+    game::MapRevealActor,
 }; // For polling tasks
 
 use std::sync::Arc;
@@ -35,7 +38,7 @@ pub struct ChunkCoords {
 
 impl ChunkCoords {
     /// Converts a world tile `Point` to `ChunkCoords`.
-    pub fn from_point(point: Point, chunk_dimension_tiles: u32) -> Self {
+    pub fn from_point(point: Point, chunk_dimension_tiles: TilesCount) -> Self {
         ChunkCoords {
             x: (point.x as f32 / chunk_dimension_tiles as f32).floor() as isize,
             y: (point.y as f32 / chunk_dimension_tiles as f32).floor() as isize,
@@ -51,7 +54,7 @@ impl ChunkCoords {
     }
 
     /// Converts `ChunkCoords` to the world tile `Point` of its bottom-left corner.
-    pub fn to_bottom_left_tile_point(&self, chunk_dimension_tiles: u32) -> Point {
+    pub fn to_bottom_left_tile_point(&self, chunk_dimension_tiles: TilesCount) -> Point {
         Point {
             x: self.x * chunk_dimension_tiles as isize,
             y: self.y * chunk_dimension_tiles as isize,
@@ -69,10 +72,10 @@ impl ChunkCoords {
 
 pub trait GridData: Send + Sync + 'static + Debug + Clone {
     type Item: Copy + Debug + Default; // Default trait required for new()
-    fn dimension(&self) -> u32;
-    fn get_item(&self, x: u32, y: u32) -> Option<&Self::Item>;
-    fn get_item_mut(&mut self, x: u32, y: u32) -> Option<&mut Self::Item>;
-    fn set_item(&mut self, x: u32, y: u32, item: Self::Item) -> bool;
+    fn dimension(&self) -> TilesCount;
+    fn get_item(&self, x: TilesCount, y: TilesCount) -> Option<&Self::Item>;
+    fn get_item_mut(&mut self, x: TilesCount, y: TilesCount) -> Option<&mut Self::Item>;
+    fn set_item(&mut self, x: TilesCount, y: TilesCount, item: Self::Item) -> bool;
     fn as_slice(&self) -> &[Self::Item];
     fn as_mut_slice(&mut self) -> &mut [Self::Item];
 }
@@ -83,14 +86,14 @@ where
     T: Copy + Debug + Send + Sync + 'static + Default,
 {
     data: Vec<T>,
-    dimension: u32,
+    dimension: TilesCount,
 }
 
 impl<T> FlatGrid<T>
 where
     T: Copy + Debug + Send + Sync + 'static + Default,
 {
-    pub fn new(dimension: u32, default_value: T) -> Self {
+    pub fn new(dimension: TilesCount, default_value: T) -> Self {
         let num_elements = (dimension * dimension) as usize;
         FlatGrid {
             data: vec![default_value; num_elements],
@@ -98,9 +101,9 @@ where
         }
     }
 
-    fn calculate_index(&self, x: u32, y: u32) -> Option<usize> {
+    fn calculate_index(&self, x: TilesCount, y: TilesCount) -> Option<usize> {
         if x < self.dimension && y < self.dimension {
-            Some((y * self.dimension + x) as usize)
+            Some((y * self.dimension + x) as TilesCount)
         } else {
             None
         }
@@ -113,19 +116,19 @@ where
 {
     type Item = T;
 
-    fn dimension(&self) -> u32 {
+    fn dimension(&self) -> TilesCount {
         self.dimension
     }
 
-    fn get_item(&self, x: u32, y: u32) -> Option<&Self::Item> {
+    fn get_item(&self, x: TilesCount, y: TilesCount) -> Option<&Self::Item> {
         self.calculate_index(x, y).map(|idx| &self.data[idx])
     }
 
-    fn get_item_mut(&mut self, x: u32, y: u32) -> Option<&mut Self::Item> {
+    fn get_item_mut(&mut self, x: TilesCount, y: TilesCount) -> Option<&mut Self::Item> {
         self.calculate_index(x, y).map(|idx| &mut self.data[idx])
     }
 
-    fn set_item(&mut self, x: u32, y: u32, item: Self::Item) -> bool {
+    fn set_item(&mut self, x: TilesCount, y: TilesCount, item: Self::Item) -> bool {
         if let Some(idx) = self.calculate_index(x, y) {
             self.data[idx] = item;
             true
@@ -165,7 +168,7 @@ pub trait MapDataProducer: Send + Sync + 'static + Clone {
     fn generate_chunk(
         &self,
         coords: ChunkCoords,
-        dimension_tiles: u32,
+        dimension_tiles: TilesCount,
     ) -> DataChunk<Self::GridType>;
 }
 
@@ -178,13 +181,13 @@ pub struct DataMap<P: MapDataProducer> {
     pub pending_tasks: HashMap<ChunkCoords, Entity>,
     pub write_queue: HashMap<Point, P::Item>, // Writes to uncreated/unloaded cells
     pub producer: P,
-    pub chunk_dimension_tiles: u32,
+    pub chunk_dimension_tiles: TilesCount,
     pub chunk_size_units: f32, // Derived from chunk_dimension_tiles and TILE_SIZE_IN_UNITS
     pub render_distance_chunks: usize, // Used by the map manager system to determine loading radius
 }
 
 impl<P: MapDataProducer> DataMap<P> {
-    pub fn new(producer: P, chunk_dimension_tiles: u32, render_distance_chunks: usize) -> Self {
+    pub fn new(producer: P, chunk_dimension_tiles: TilesCount, render_distance_chunks: usize) -> Self {
         let chunk_size_units = chunk_dimension_tiles as f32 * TILE_SIZE_IN_UNITS;
         Self {
             loaded_chunks: HashMap::new(),
@@ -218,7 +221,7 @@ impl<P: MapDataProducer> DataMap<P> {
                 % self.chunk_dimension_tiles as isize;
             chunk
                 .grid
-                .get_item(local_x as u32, local_y as u32)
+                .get_item(local_x as TilesCount, local_y as TilesCount)
                 .copied() // Get a copy of the item
                 .unwrap_or_else(|| self.producer.default_value()) // Should not happen if logic is correct
         } else {
@@ -257,7 +260,7 @@ impl<P: MapDataProducer> DataMap<P> {
             let local_y = (point.y % self.chunk_dimension_tiles as isize
                 + self.chunk_dimension_tiles as isize)
                 % self.chunk_dimension_tiles as isize;
-            chunk.grid.get_item(local_x as u32, local_y as u32).copied()
+            chunk.grid.get_item(local_x as TilesCount, local_y as TilesCount).copied()
         } else {
             self.requested_chunks.insert(chunk_coords);
             None
@@ -292,7 +295,7 @@ impl<P: MapDataProducer> DataMap<P> {
             let local_y = (point.y % self.chunk_dimension_tiles as isize
                 + self.chunk_dimension_tiles as isize)
                 % self.chunk_dimension_tiles as isize;
-            chunk.grid.get_item(local_x as u32, local_y as u32).copied()
+            chunk.grid.get_item(local_x as TilesCount, local_y as TilesCount).copied()
         })
     }
 
@@ -319,7 +322,7 @@ impl<P: MapDataProducer> DataMap<P> {
             let local_y = (point.y % self.chunk_dimension_tiles as isize
                 + self.chunk_dimension_tiles as isize)
                 % self.chunk_dimension_tiles as isize;
-            chunk.grid.set_item(local_x as u32, local_y as u32, value);
+            chunk.grid.set_item(local_x as TilesCount, local_y as TilesCount, value);
             // Remove from write queue if it was there and is now written
             self.write_queue.remove(&point);
         } else {
@@ -364,42 +367,85 @@ impl<P: MapDataProducer> DataMap<P> {
 
 // System to manage loading/unloading based on a focus point (e.g., player/camera)
 pub fn data_map_load_unload_system<P: MapDataProducer>(
+    player_query: Query<&Transform, With<MapRevealActor>>,
+    mut data_map: ResMut<DataMap<P>>,
+) {
+    for player_transform in player_query.as_readonly().iter() {
+        let focus_world_pos = player_transform.translation.xy();
+        let current_focus_chunk_coords =
+            ChunkCoords::from_world_pos(focus_world_pos, data_map.chunk_size_units);
+
+        let mut required_chunks_set: HashSet<ChunkCoords> = HashSet::new();
+
+        for dx in
+            -(data_map.render_distance_chunks as isize)..=(data_map.render_distance_chunks as isize)
+        {
+            for dy in -(data_map.render_distance_chunks as isize)
+                ..=(data_map.render_distance_chunks as isize)
+            {
+                required_chunks_set.insert(ChunkCoords {
+                    x: current_focus_chunk_coords.x + dx,
+                    y: current_focus_chunk_coords.y + dy,
+                });
+            }
+        }
+
+        // Unload chunks that are no longer required
+        // data_map
+        //     .loaded_chunks
+        //     .retain(|coords, _| required_chunks_set.contains(coords));
+
+        // Request new chunks
+        for coords in required_chunks_set.iter() {
+            if !data_map.loaded_chunks.contains_key(coords) &&
+           !data_map.pending_tasks.contains_key(coords) && // Don't request if already pending
+           !data_map.requested_chunks.contains(coords)
+            // Don't request if already in queue
+            {
+                data_map.requested_chunks.insert(*coords);
+            }
+        }
+    }
+}
+
+pub fn data_map_load_unload_system_for_player<P: MapDataProducer>(
     player_query: Query<&Transform, With<Player>>,
     mut data_map: ResMut<DataMap<P>>,
 ) {
-    let player_transform = player_query.single().unwrap();
-    let focus_world_pos = player_transform.translation.xy();
-    let current_focus_chunk_coords =
-        ChunkCoords::from_world_pos(focus_world_pos, data_map.chunk_size_units);
+    for player_transform in player_query.as_readonly().iter() {
+        let focus_world_pos = player_transform.translation.xy();
+        let current_focus_chunk_coords =
+            ChunkCoords::from_world_pos(focus_world_pos, data_map.chunk_size_units);
 
-    let mut required_chunks_set: HashSet<ChunkCoords> = HashSet::new();
+        let mut required_chunks_set: HashSet<ChunkCoords> = HashSet::new();
 
-    for dx in
-        -(data_map.render_distance_chunks as isize)..=(data_map.render_distance_chunks as isize)
-    {
-        for dy in
+        for dx in
             -(data_map.render_distance_chunks as isize)..=(data_map.render_distance_chunks as isize)
         {
-            required_chunks_set.insert(ChunkCoords {
-                x: current_focus_chunk_coords.x + dx,
-                y: current_focus_chunk_coords.y + dy,
-            });
+            for dy in -(data_map.render_distance_chunks as isize)
+                ..=(data_map.render_distance_chunks as isize)
+            {
+                required_chunks_set.insert(ChunkCoords {
+                    x: current_focus_chunk_coords.x + dx,
+                    y: current_focus_chunk_coords.y + dy,
+                });
+            }
         }
-    }
 
-    // Unload chunks that are no longer required
-    data_map
-        .loaded_chunks
-        .retain(|coords, _| required_chunks_set.contains(coords));
+        // Unload chunks that are no longer required
+        data_map
+            .loaded_chunks
+            .retain(|coords, _| required_chunks_set.contains(coords));
 
-    // Request new chunks
-    for coords in required_chunks_set.iter() {
-        if !data_map.loaded_chunks.contains_key(coords) &&
+        // Request new chunks
+        for coords in required_chunks_set.iter() {
+            if !data_map.loaded_chunks.contains_key(coords) &&
            !data_map.pending_tasks.contains_key(coords) && // Don't request if already pending
            !data_map.requested_chunks.contains(coords)
-        // Don't request if already in queue
-        {
-            data_map.requested_chunks.insert(*coords);
+            // Don't request if already in queue
+            {
+                data_map.requested_chunks.insert(*coords);
+            }
         }
     }
 }
@@ -494,7 +540,7 @@ pub fn data_map_process_completed_tasks_system<P: MapDataProducer>(
                 let local_y = (point.y % chunk_dimension_tiles as isize
                     + chunk_dimension_tiles as isize)
                     % chunk_dimension_tiles as isize;
-                chunk.grid.set_item(local_x as u32, local_y as u32, value);
+                chunk.grid.set_item(local_x as TilesCount, local_y as TilesCount, value);
                 points_to_remove.push(point); // Mark for removal
             }
         }
@@ -511,7 +557,7 @@ pub fn data_map_process_completed_tasks_system<P: MapDataProducer>(
 pub fn insert_chunked_plugin<P>(
     app: &mut bevy::prelude::App,
     producer: P,
-    manhattan_distance_tiles_init: usize,
+    manhattan_distance_tiles_init: TilesCount,
 ) -> &mut bevy::prelude::App
 where
     P: MapDataProducer + Send + Sync + Clone + 'static,

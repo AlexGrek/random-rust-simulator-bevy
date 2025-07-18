@@ -9,8 +9,9 @@ use bevy::{
 
 use crate::{
     core::{
-        basics::{GAME_WORLD_CENTER_THRESHOLD, Point},
+        basics::{Point, GAME_WORLD_CENTER_THRESHOLD},
         chunks::{ChunkCoords, DataChunk, DataMap, FlatGrid, GridData, MapDataProducer},
+        constants::TILE_SIZE_IN_UNITS, units::TilesCount,
     },
     game::Player,
 };
@@ -39,7 +40,7 @@ impl MapDataProducer for PassabilityProducer {
     fn generate_chunk(
         &self,
         coords: ChunkCoords,
-        dimension_tiles: u32,
+        dimension_tiles: TilesCount,
     ) -> DataChunk<Self::GridType> {
         let mut grid = FlatGrid::new(dimension_tiles, Passability::FREE);
         let chunk_center_x =
@@ -66,10 +67,10 @@ impl MapDataProducer for PassabilityProducer {
                     }
                 }
 
-                // Example: Add a small "river" (impassable)
-                if world_tile_y > 100 && world_tile_y < 105 {
-                    passability = Passability::IMPASSABLE;
-                }
+                // // Example: Add a small "river" (impassable)
+                // if world_tile_y > 100 && world_tile_y < 105 {
+                //     passability = Passability::IMPASSABLE;
+                // }
 
                 grid.set_item(x, y, passability);
             }
@@ -86,10 +87,8 @@ pub fn check_player_passability(
 ) {
     let player_transform = player_query.single().unwrap();
     let player_tile_point = Point {
-        x: (player_transform.translation.x / crate::core::basics::TILE_SIZE_IN_UNITS).round()
-            as isize,
-        y: (player_transform.translation.y / crate::core::basics::TILE_SIZE_IN_UNITS).round()
-            as isize,
+        x: (player_transform.translation.x / TILE_SIZE_IN_UNITS).round() as isize,
+        y: (player_transform.translation.y / TILE_SIZE_IN_UNITS).round() as isize,
     };
 
     if last_checked_point.map_or(true, |p| p != player_tile_point) {

@@ -1,41 +1,20 @@
 // --- Example Concrete Data Types ---
 
 use bevy::{
-    DefaultPlugins,
-    app::{App, Startup, Update},
-    asset::Assets,
-    color::{Color, palettes::css::LIMEGREEN},
-    core_pipeline::core_2d::Camera2d,
-    ecs::{
-        component::Component,
-        query::{With, Without},
-        system::{Commands, Local, Query, Res, ResMut},
-    },
-    gizmos::gizmos::Gizmos,
-    input::{ButtonInput, keyboard::KeyCode},
-    log::info,
-    math::{Vec2, Vec3, primitives::Circle},
-    render::mesh::{Mesh, Mesh2d},
-    sprite::{ColorMaterial, MeshMaterial2d},
-    time::Time,
-    transform::components::{GlobalTransform, Transform},
+    app::{App, Startup, Update}, asset::{Assets, Handle}, color::{palettes::css::{LIMEGREEN, RED}, Color}, core_pipeline::core_2d::Camera2d, ecs::{
+        component::Component, query::{With, Without}, resource::Resource, system::{Commands, Query, Res, ResMut}
+    }, gizmos::gizmos::Gizmos, math::{primitives::Circle, Vec2, Vec3}, platform::collections::{HashMap, HashSet}, render::mesh::{Mesh, Mesh2d}, sprite::{ColorMaterial, MeshMaterial2d}, time::Time, transform::components::{GlobalTransform, Transform}, DefaultPlugins
 };
 
 use crate::{
     core::{
-        basics::{
-            DEFAULT_CHUNK_DIMENSION_TILES, DEFAULT_RENDER_DISTANCE_CHUNKS,
-            GAME_WORLD_CENTER_THRESHOLD, Point, TILE_SIZE_IN_UNITS,
-        },
-        chunks::{
-            ChunkCoords, DataChunk, DataMap, FlatGrid, GridData, MapDataProducer,
-            data_map_load_unload_system, data_map_process_completed_tasks_system,
-            data_map_spawn_tasks_system, insert_chunked_plugin,
-        },
+        basics::DEFAULT_RENDER_DISTANCE_CHUNKS,
+        chunks::{insert_chunked_plugin, DataMap}, constants::DEFAULT_CHUNK_DIMENSION_TILES,
     },
     game::{
-        Player,
-        world::passability::{PassabilityProducer, check_player_passability},
+        physix, render::tilemap_render::{
+            background_load_required_chunks_system, background_load_unload_system, BackgroundHypertileTracker,
+        }, world::passability::{check_player_passability, PassabilityProducer}, MapRevealActor, Player
     },
 };
 
@@ -57,20 +36,32 @@ impl Default for FollowCamera {
     }
 }
 
+#[derive(Debug, Default, Clone, Resource)]
+pub struct Pallete {
+    pub colors: HashMap::<String, Handle<ColorMaterial>>
+}
+
 fn setup_game(
     mut commands: Commands,
-    mut passability_map: ResMut<DataMap<PassabilityProducer>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
+    mut pallete: ResMut<Pallete>,
+    
 ) {
     commands.spawn((Camera2d::default(), FollowCamera::default()));
+    let limegreen = materials.add(ColorMaterial::from_color(Color::from(LIMEGREEN)));
+    let red = materials.add(ColorMaterial::from_color(Color::from(RED)));
+    pallete.colors.insert("limegreen".to_string(), limegreen);
+    pallete.colors.insert("red".to_string(), red);
     commands.spawn((
         Player,
+        MapRevealActor,
+        crate::game::physix::PrevXY::default(),
         Transform::from_translation(Vec3::new(0.0, 0.0, 10.0)),
         GlobalTransform::default(),
         // Add visual for player
         Mesh2d(meshes.add(Circle::new(5.0))), // Circle directly from bevy::math
-        MeshMaterial2d(materials.add(Color::from(LIMEGREEN))), // Explicitly create and add ColorMaterial
+        MeshMaterial2d(pallete.colors.get("limegreen").unwrap().clone()), // Explicitly create and add ColorMaterial
     ));
 }
 
@@ -110,17 +101,27 @@ fn main() {
 
     app.add_plugins(DefaultPlugins)
         .add_systems(Startup, setup_game)
+        .add_systems(
+            Update,
+            (
+                background_load_required_chunks_system,
+                background_load_unload_system,
+            ),
+        )
         // Insert your DataMap resources
         .insert_resource(DataMap::<PassabilityProducer>::new(
             PassabilityProducer,
             DEFAULT_CHUNK_DIMENSION_TILES,
-            DEFAULT_RENDER_DISTANCE_CHUNKS,
+            DEFAULT_RENDER_DISTANCE_CHUNKS * 10,
         ))
+        .insert_resource(BackgroundHypertileTracker {spawned: HashSet::new(), requested: HashSet::new()})
+        .insert_resource(Pallete::default())
         // Add systems to the Update schedule
         .add_systems(
             Update,
             (
                 game::player_movement,
+                physix::bounce_back,
                 // These run for each DataMap type
                 // Add these lines for each additional DataMap you create (e.g., TileTypeProducer)
                 // data_map_load_unload_system::<TileTypeProducer>,
