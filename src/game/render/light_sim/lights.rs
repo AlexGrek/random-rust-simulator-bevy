@@ -1,3 +1,4 @@
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct LightDefinition {
     pub color: [i32; 3],
 }
@@ -55,4 +56,9 @@ impl LightDefinition {
     pub fn set_color_rgba(&mut self, rgba: [u8; 4]) {
         *self = Self::from(rgba);
     }
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct UndirectedLightEmitter {
+    pub props: LightDefinition
 }

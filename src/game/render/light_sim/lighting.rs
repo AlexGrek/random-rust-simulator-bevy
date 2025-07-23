@@ -2,27 +2,26 @@ use bevy::{
     asset::RenderAssetUsages,
     color::palettes::css,
     prelude::*,
-    render::render_resource::{
-            Extent3d, TextureDimension,
-            TextureFormat,
-        },
+    render::render_resource::{Extent3d, TextureDimension, TextureFormat},
     sprite::Material2dPlugin,
 };
 
 use crate::{
-    FollowCamera,
     core::{
         basics::Point,
+        chunks::insert_chunked_plugin,
         constants::TILE_SIZE_IN_UNITS_UNITS,
         units::{TilesCount, Units},
-    },
-    game::render::blending::{AdditiveMaterial, MultiplyBlendMaterial, ScreenBlendMaterial},
+    }, game::render::{
+        blending::{AdditiveMaterial, MultiplyBlendMaterial, ScreenBlendMaterial},
+        light_sim::{lights_map::{LightEmitterCell, LightsMapProducer}, simulation},
+    }, FollowCamera
 };
 
 pub struct Lighting;
 
-const LIGHTING_OVERLAY_TILES: TilesCount = 32;
-const OVERLAY_IMAGE_SIZE: Units = LIGHTING_OVERLAY_TILES as isize * TILE_SIZE_IN_UNITS_UNITS;
+pub const LIGHTING_OVERLAY_TILES: TilesCount = 32;
+pub const OVERLAY_IMAGE_SIZE: Units = LIGHTING_OVERLAY_TILES as isize * TILE_SIZE_IN_UNITS_UNITS;
 
 #[derive(Component)]
 pub struct OverlayImage(Handle<Image>);
@@ -41,7 +40,13 @@ impl Plugin for Lighting {
     }
 }
 
-fn setup_directional_lights(app: &mut App) {}
+fn setup_directional_lights(app: &mut App) {
+    insert_chunked_plugin(app, LightsMapProducer::default(), 100);
+    app.add_systems(Update, simulation::run_lights_simulation);
+}
+
+#[derive(Resource)]
+pub struct LightOverlayTextureHandle(Handle<Image>);
 
 fn setup_overlay(
     mut commands: Commands,
@@ -62,7 +67,7 @@ fn setup_overlay(
         &(color),
         // Use the same encoding as the color we set
         TextureFormat::Rgba8UnormSrgb,
-        RenderAssetUsages::RENDER_WORLD,
+        RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
     );
     let handle = images.add(image);
     // Additive Blend
@@ -79,6 +84,7 @@ fn setup_overlay(
         Mesh2d(mesh),
         Transform::from_xyz(0.0, 0.0, 100000.0),
     ));
+    commands.insert_resource(LightOverlayTextureHandle(handle));
 }
 
 fn overlay_texture_follow_camera(
