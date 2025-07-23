@@ -1,4 +1,4 @@
-use bevy::{color::Color, image::Image, log::info, render::render_resource::TextureFormat};
+use bevy::image::Image;
 
 // Function to draw a rectangle on an Image
 pub fn draw_rect_on_image(

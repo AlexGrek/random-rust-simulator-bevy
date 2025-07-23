@@ -22,7 +22,6 @@ use bevy::{
         query::With,
         system::{Commands, Query, ResMut},
     },
-    log::info,
     transform::components::Transform,
 };
 

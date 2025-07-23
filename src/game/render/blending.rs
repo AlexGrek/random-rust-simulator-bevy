@@ -1,16 +1,13 @@
 use bevy::{
-    asset::{RenderAssetUsages, uuid},
-    color::palettes::css,
     prelude::*,
     render::{
         mesh::MeshVertexBufferLayoutRef,
         render_resource::{
-            AsBindGroup, BlendComponent, BlendFactor, BlendOperation, BlendState, Extent3d,
-            RenderPipelineDescriptor, ShaderRef, SpecializedMeshPipelineError, TextureDimension,
-            TextureFormat,
+            AsBindGroup, BlendComponent, BlendFactor, BlendOperation, BlendState,
+            RenderPipelineDescriptor, ShaderRef, SpecializedMeshPipelineError,
         },
     },
-    sprite::{AlphaMode2d, Material2d, Material2dKey, Material2dPlugin},
+    sprite::{AlphaMode2d, Material2d, Material2dKey},
 };
 
 #[derive(AsBindGroup, Debug, Clone, Asset, TypePath)]

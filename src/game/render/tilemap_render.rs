@@ -1,10 +1,10 @@
 use bevy::{
     asset::{Handle, RenderAssetUsages},
-    color::{self, ColorToPacked, palettes::css},
+    color::{ColorToPacked, palettes::css},
     ecs::{
         query::With,
         resource::Resource,
-        system::{Commands, Query, Res, ResMut},
+        system::{Commands, Query, ResMut},
     },
     image::Image,
     math::Vec3Swizzles,
@@ -19,12 +19,12 @@ use crate::{
         basics::Point,
         chunks::{ChunkCoords, DataMap},
         constants::TILE_SIZE_IN_UNITS_UNITS,
-        units::{TilesCount, Units},
+        units::TilesCount,
     },
     game::{
         MapRevealActor,
         render::utils,
-        world::passability::{self, PassabilityProducer},
+        world::passability::PassabilityProducer,
     },
 };
 

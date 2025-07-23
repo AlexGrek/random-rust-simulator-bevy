@@ -1,27 +1,28 @@
 use bevy::{
-    asset::{RenderAssetUsages, uuid},
+    asset::RenderAssetUsages,
     color::palettes::css,
     prelude::*,
-    render::{
-        mesh::MeshVertexBufferLayoutRef,
-        render_resource::{
-            AsBindGroup, BlendComponent, BlendFactor, BlendOperation, BlendState, Extent3d,
-            RenderPipelineDescriptor, ShaderRef, SpecializedMeshPipelineError, TextureDimension,
+    render::render_resource::{
+            Extent3d, TextureDimension,
             TextureFormat,
         },
-    },
-    sprite::{AlphaMode2d, Material2d, Material2dKey, Material2dPlugin},
+    sprite::Material2dPlugin,
 };
 
 use crate::{
     FollowCamera,
-    core::{basics::Point, constants::TILE_SIZE_IN_UNITS_UNITS, units::Units},
+    core::{
+        basics::Point,
+        constants::TILE_SIZE_IN_UNITS_UNITS,
+        units::{TilesCount, Units},
+    },
     game::render::blending::{AdditiveMaterial, MultiplyBlendMaterial, ScreenBlendMaterial},
 };
 
 pub struct Lighting;
 
-const OVERLAY_IMAGE_SIZE: Units = 120;
+const LIGHTING_OVERLAY_TILES: TilesCount = 32;
+const OVERLAY_IMAGE_SIZE: Units = LIGHTING_OVERLAY_TILES as isize * TILE_SIZE_IN_UNITS_UNITS;
 
 #[derive(Component)]
 pub struct OverlayImage(Handle<Image>);
@@ -35,9 +36,12 @@ impl Plugin for Lighting {
         ));
         // Register systems, resources, events, etc.
         app.add_systems(Update, overlay_texture_follow_camera);
+        setup_directional_lights(app);
         app.add_systems(Startup, setup_overlay);
     }
 }
+
+fn setup_directional_lights(app: &mut App) {}
 
 fn setup_overlay(
     mut commands: Commands,
@@ -45,9 +49,8 @@ fn setup_overlay(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<MultiplyBlendMaterial>>,
 ) {
-    
     let color = css::GREY.to_u8_array();
-    let mut image = Image::new_fill(
+    let image = Image::new_fill(
         // 2D image of size
         Extent3d {
             width: OVERLAY_IMAGE_SIZE as u32,

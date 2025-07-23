@@ -3,7 +3,6 @@ use bevy::{
         query::With,
         system::{Local, Query, ResMut},
     },
-    log::info,
     transform::components::Transform,
 };
 

@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{
     core::chunks::DataMap,
-    game::{Player, world::passability::PassabilityProducer},
+    game::world::passability::PassabilityProducer,
 };
 
 #[derive(Component, Default)]

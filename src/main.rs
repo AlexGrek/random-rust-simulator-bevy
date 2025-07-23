@@ -12,7 +12,7 @@ use crate::{
         chunks::{insert_chunked_plugin, DataMap}, constants::DEFAULT_CHUNK_DIMENSION_TILES,
     },
     game::{
-        physix, render::{lighting::Lighting, tilemap_render::{
+        physix, render::{light_sim::lighting::Lighting, tilemap_render::{
             background_load_required_chunks_system, background_load_unload_system, BackgroundHypertileTracker,
         }}, world::passability::{check_player_passability, PassabilityProducer}, MapRevealActor, Player
     },
