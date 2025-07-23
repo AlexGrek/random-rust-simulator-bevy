@@ -1,64 +1,44 @@
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+use bevy::color::{Color, ColorToComponents, Srgba};
+
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct LightDefinition {
-    pub color: [i32; 3],
-}
-
-const LN_256: f64 = 5.545177444479562;
-
-impl From<[u8; 3]> for LightDefinition {
-    fn from([r, g, b]: [u8; 3]) -> Self {
-        fn scale(c: u8) -> i32 {
-            let scaled = (1.0 + c as f64).ln() / LN_256;
-            (scaled * i32::MAX as f64).round() as i32
-        }
-        LightDefinition {
-            color: [scale(r), scale(g), scale(b)],
-        }
-    }
+    pub color: [f32; 3],
 }
 
 impl From<[u8; 4]> for LightDefinition {
-    fn from([r, g, b, a]: [u8; 4]) -> Self {
-        let alpha = a as f64 / 255.0;
-        fn scale(c: u8, alpha: f64) -> i32 {
-            let scaled = (1.0 + c as f64).ln() / LN_256;
-            (scaled * alpha * i32::MAX as f64).round() as i32
-        }
+    fn from(rgba: [u8; 4]) -> Self {
+        let [r, g, b, a] = rgba;
+        let alpha = a as f32 / 255.0;
         LightDefinition {
-            color: [scale(r, alpha), scale(g, alpha), scale(b, alpha)],
+            color: [
+                (r as f32 / 255.0) * alpha,
+                (g as f32 / 255.0) * alpha,
+                (b as f32 / 255.0) * alpha,
+            ],
         }
     }
 }
 
-impl LightDefinition {
-    pub fn get_color_rgba(&self) -> [u8; 4] {
-        let max_i = self.color.iter().copied().max().unwrap_or(0).max(1);
-        let alpha = (max_i as f64 / i32::MAX as f64).clamp(0.0, 1.0);
-
-        fn inverse_scale(c: i32, alpha: f64) -> u8 {
-            if alpha == 0.0 {
-                0
-            } else {
-                let norm = c as f64 / (i32::MAX as f64 * alpha);
-                ((norm * LN_256).exp() - 1.0).clamp(0.0, 255.0).round() as u8
-            }
+impl From<[u8; 3]> for LightDefinition {
+    fn from(rgb: [u8; 3]) -> Self {
+        let [r, g, b] = rgb;
+        LightDefinition {
+            color: [r as f32 / 255.0, g as f32 / 255.0, b as f32 / 255.0],
         }
-
-        let [r, g, b] = self.color;
-        [
-            inverse_scale(r, alpha),
-            inverse_scale(g, alpha),
-            inverse_scale(b, alpha),
-            (alpha * 255.0).round().clamp(0.0, 255.0) as u8,
-        ]
-    }
-
-    pub fn set_color_rgba(&mut self, rgba: [u8; 4]) {
-        *self = Self::from(rgba);
     }
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+impl From<Srgba> for LightDefinition {
+    fn from(srgba: Srgba) -> Self {
+        let color: Color = srgba.into(); // convert Srgba -> Color
+        let [r, g, b, a] = color.to_srgba().to_f32_array(); // now extract linear values
+        Self {
+            color: [r * 1.0, g * 1.0, b * 1.0], // premultiplied alpha
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct UndirectedLightEmitter {
-    pub props: LightDefinition
+    pub props: LightDefinition,
 }

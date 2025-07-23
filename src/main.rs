@@ -3,7 +3,7 @@
 use bevy::{
     app::{App, Startup, Update}, asset::{Assets, Handle}, color::{palettes::css::{LIMEGREEN, RED}, Color}, core_pipeline::core_2d::Camera2d, ecs::{
         component::Component, query::{With, Without}, resource::Resource, system::{Commands, Query, Res, ResMut}
-    }, gizmos::gizmos::Gizmos, math::{primitives::Circle, Vec2, Vec3}, platform::collections::{HashMap, HashSet}, render::mesh::{Mesh, Mesh2d}, sprite::{ColorMaterial, MeshMaterial2d}, time::Time, transform::components::{GlobalTransform, Transform}, DefaultPlugins
+    }, gizmos::gizmos::Gizmos, math::{primitives::Circle, Vec2, Vec3}, platform::collections::{HashMap, HashSet}, render::mesh::{Mesh, Mesh2d}, sprite::{ColorMaterial, MeshMaterial2d}, time::{Fixed, Time}, transform::components::{GlobalTransform, Transform}, DefaultPlugins
 };
 
 use crate::{
@@ -116,6 +116,7 @@ fn main() {
         ))
         .insert_resource(BackgroundHypertileTracker {spawned: HashSet::new(), requested: HashSet::new()})
         .insert_resource(Pallete::default())
+        .insert_resource(Time::<Fixed>::from_hz(30.0))
         // Add systems to the Update schedule
         .add_systems(
             Update,
