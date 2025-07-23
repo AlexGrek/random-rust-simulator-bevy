@@ -12,7 +12,7 @@ pub fn draw_rect_on_image(
     let image_width = image.width() as usize;
     let image_height = image.height() as usize;
 
-    info!("Drawing RECKT: {rect_x} {rect_y} {rect_width} {rect_height} {color:?}");
+    // info!("Drawing RECKT: {rect_x} {rect_y} {rect_width} {rect_height} {color:?}");
     
     // Ensure the image format is RGBA8UnormSrgb for easy pixel manipulation
     // If your image uses a different format, you'll need to adjust how you write pixel data.

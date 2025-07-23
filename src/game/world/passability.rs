@@ -60,7 +60,7 @@ impl MapDataProducer for PassabilityProducer {
                 let mut passability = Passability::FREE;
                 if dist_from_center > GAME_WORLD_CENTER_THRESHOLD {
                     let falloff = (dist_from_center - GAME_WORLD_CENTER_THRESHOLD) / 500.0;
-                    info!("Falloff: {}", &falloff);
+                    // info!("Falloff: {}", &falloff);
                     passability = Passability((255.0 - (falloff * 255.0).min(255.0)) as u8);
                     if passability.0 < 250 {
                         passability = Passability(0);
@@ -94,10 +94,10 @@ pub fn check_player_passability(
     if last_checked_point.map_or(true, |p| p != player_tile_point) {
         *last_checked_point = Some(player_tile_point);
         let passability = passability_map.get(player_tile_point); // This will request the chunk if not loaded
-        info!(
-            "Player at tile {:?} has passability: {:?}",
-            player_tile_point, passability
-        );
+        // info!(
+        //     "Player at tile {:?} has passability: {:?}",
+        //     player_tile_point, passability
+        // );
 
         // Example: Try writing
         if passability.0 == Passability::FREE.0 {

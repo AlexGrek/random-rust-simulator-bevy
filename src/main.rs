@@ -12,9 +12,9 @@ use crate::{
         chunks::{insert_chunked_plugin, DataMap}, constants::DEFAULT_CHUNK_DIMENSION_TILES,
     },
     game::{
-        physix, render::tilemap_render::{
+        physix, render::{lighting::Lighting, tilemap_render::{
             background_load_required_chunks_system, background_load_unload_system, BackgroundHypertileTracker,
-        }, world::passability::{check_player_passability, PassabilityProducer}, MapRevealActor, Player
+        }}, world::passability::{check_player_passability, PassabilityProducer}, MapRevealActor, Player
     },
 };
 
@@ -137,6 +137,7 @@ fn main() {
             ),
         );
     insert_chunked_plugin(&mut app, PassabilityProducer, 50);
+    app.add_plugins(Lighting);
     app.run();
 }
 

@@ -356,12 +356,12 @@ impl<P: MapDataProducer> DataMap<P> {
                 }
             }
         }
-        info!(
-            "DataMap<{}> init requested chunks up to Manhattan distance {} (chunks: {})",
-            std::any::type_name::<P::Item>(),
-            manhattan_distance_tiles,
-            chunk_manhattan_distance
-        );
+        // info!(
+        //     "DataMap<{}> init requested chunks up to Manhattan distance {} (chunks: {})",
+        //     std::any::type_name::<P::Item>(),
+        //     manhattan_distance_tiles,
+        //     chunk_manhattan_distance
+        // );
     }
 }
 
@@ -479,11 +479,11 @@ pub fn data_map_spawn_tasks_system<P: MapDataProducer>(
                 .id();
 
             new_pending_tasks.push((current_coords, task_entity));
-            info!(
-                "Spawned DataMap<{}> gen task for chunk: {:?}",
-                std::any::type_name::<P::Item>(),
-                current_coords
-            );
+            // info!(
+            //     "Spawned DataMap<{}> gen task for chunk: {:?}",
+            //     std::any::type_name::<P::Item>(),
+            //     current_coords
+            // );
         }
     }
 
@@ -512,11 +512,11 @@ pub fn data_map_process_completed_tasks_system<P: MapDataProducer>(
 
     // Apply completed chunks and pending writes
     for (coords, mut chunk) in completed_chunks {
-        info!(
-            "DataMap<{}> chunk {:?} generated.",
-            std::any::type_name::<P::Item>(),
-            coords
-        );
+        // info!(
+        //     "DataMap<{}> chunk {:?} generated.",
+        //     std::any::type_name::<P::Item>(),
+        //     coords
+        // );
         // Apply any writes from the queue to this newly generated chunk
         let chunk_bottom_left_tile =
             coords.to_bottom_left_tile_point(data_map.chunk_dimension_tiles);

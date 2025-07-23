@@ -154,7 +154,7 @@ pub fn background_load_required_chunks_system(
         let y = requested_chunk.y as f32 * IMAGE_WIDTH_PX as f32 + offset;
         commands.spawn((
             Sprite::from_image(handle),
-            Transform::from_xyz(x, y, 0.0),
+            Transform::from_xyz(x, y, -1.0),
         ));
     };
 
