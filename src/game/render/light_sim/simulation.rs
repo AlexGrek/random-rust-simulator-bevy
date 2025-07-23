@@ -3,26 +3,30 @@ use bevy::prelude::*;
 use crate::{
     core::{basics::Point, chunks::DataMap, constants::TILE_SIZE_IN_UNITS_UNITS},
     game::render::light_sim::{
-        directions::Direction,
-        lighting::{LIGHTING_OVERLAY_TILES, LightOverlayTextureHandle, OverlayImage},
-        lights_map::{LightEmitterCell, LightsMapProducer},
-    },
+            color_utils,
+            directions::Direction,
+            lighting::{
+                LIGHTING_OVERLAY_TILES, LightOverlayTextureHandle, OVERLAY_IMAGE_SIZE, OverlayImage,
+            },
+            lights_map::LightsMapProducer,
+        },
 };
 
 #[derive(Resource)]
 pub struct LightingBuffers {
     pub read: [Vec<Vec<[i32; 3]>>; 8],
     pub write: [Vec<Vec<[i32; 3]>>; 8],
+    pub initialized: bool,
 }
 
 impl LightingBuffers {
     /// Initializes LightingBuffers with correctly sized zeroed buffers.
-    pub fn init(write_size: usize) -> Self {
+    pub fn init(&mut self, write_size: usize) {
         let blank_tile = || vec![vec![[0; 3]; write_size]; write_size];
-        Self {
-            read: std::array::from_fn(|_| blank_tile()),
-            write: std::array::from_fn(|_| blank_tile()),
-        }
+        self.read = std::array::from_fn(|_| blank_tile());
+        self.write = std::array::from_fn(|_| blank_tile());
+        self.initialized = true;
+        info!("Double buffer for light sim initialized");
     }
 
     /// Swaps read/write and zeroes out the write buffer in-place.
@@ -45,32 +49,21 @@ impl Default for LightingBuffers {
         Self {
             read: std::array::from_fn(|_| vec![]),
             write: std::array::from_fn(|_| vec![]),
+            initialized: false,
         }
     }
 }
 
 pub fn run_lights_simulation(
-    mut light_texture: ResMut<LightOverlayTextureHandle>,
+    light_texture_handle: Res<LightOverlayTextureHandle>,
+    mut images: ResMut<Assets<Image>>,
     lightsources: Res<DataMap<LightsMapProducer>>,
     texture_world_position: Query<&Transform, With<OverlayImage>>,
     mut buffer: Local<LightingBuffers>,
 ) {
     // initialize buffers (if not yet initialized)
-    if buffer.read[0].is_empty() {
-        for dir in Direction::ALL {
-            buffer.read[dir as usize] =
-                vec![
-                    vec![std::array::from_fn(|_| 0); LIGHTING_OVERLAY_TILES];
-                    LIGHTING_OVERLAY_TILES
-                ];
-        }
-        for dir in Direction::ALL {
-            buffer.write[dir as usize] =
-                vec![
-                    vec![std::array::from_fn(|_| 0); LIGHTING_OVERLAY_TILES];
-                    LIGHTING_OVERLAY_TILES
-                ];
-        }
+    if !buffer.initialized {
+        buffer.init(LIGHTING_OVERLAY_TILES);
     }
     // read lights map and produce a buffer for all directions
     let world_position_opt = texture_world_position.single();
@@ -105,16 +98,69 @@ pub fn run_lights_simulation(
                 let center_tile_lightdata = center_tile_lightdata_cell.undirected_lights;
 
                 if let Some(light) = center_tile_lightdata {
+                    info!(
+                        "Light detected: {x},{y}: {:?}",
+                        light.props.get_color_rgba()
+                    );
                     for dir in Direction::ALL {
                         buffer.write[dir as usize][x][y] = light.props.color;
                     }
                 }
             }
         }
+        buffer.swap_buffers_clear_write();
 
         // dummy simulation logic - do nothing for now
 
         // render result
-        light_texture
+        let image = images
+            .get_mut(&light_texture_handle.0)
+            .expect("Image not found");
+        for x in 0..LIGHTING_OVERLAY_TILES {
+            for y in 0..LIGHTING_OVERLAY_TILES {
+                let texture_y_px = y * TILE_SIZE_IN_UNITS_UNITS as usize;
+                let total_px = OVERLAY_IMAGE_SIZE as usize;
+                if buffer.read[Direction::E as usize][x][y][0] > 0 {
+                    let my_x = x * TILE_SIZE_IN_UNITS_UNITS as usize;
+                    let my_y =
+                        total_px - (texture_y_px as isize + TILE_SIZE_IN_UNITS_UNITS) as usize;
+                    let srgba = Srgba::from_u8_array(color_utils::convert_color(
+                        buffer.read[Direction::E as usize][x][y],
+                    ));
+                    info!(
+                        "We detected something: {:?} at {my_x} {my_y}: {:?}",
+                        buffer.read[Direction::E as usize][x][y],
+                        srgba
+                    );
+                }
+                // if buffer.read[Direction::E as usize][x][y][0] == 0 {
+                //     utils::draw_rect_on_image(
+                //         &mut image,
+                //         x * TILE_SIZE_IN_UNITS_UNITS as usize,
+                //         total_px - (texture_y_px as isize + TILE_SIZE_IN_UNITS_UNITS) as usize,
+                //         TILE_SIZE_IN_UNITS_UNITS as usize,
+                //         TILE_SIZE_IN_UNITS_UNITS as usize,
+                //         css::DARK_GREEN.to_u8_array(),
+                //     );
+                // }
+                // utils::draw_rect_on_image(
+                //     &mut image,
+                //     x * TILE_SIZE_IN_UNITS_UNITS as usize,
+                //     total_px - (texture_y_px as isize + TILE_SIZE_IN_UNITS_UNITS) as usize,
+                //     TILE_SIZE_IN_UNITS_UNITS as usize,
+                //     TILE_SIZE_IN_UNITS_UNITS as usize,
+                //     color_utils::convert_color(buffer.read[Direction::E as usize][x][y]),
+                // );
+                image
+                    .set_color_at(
+                        x as u32,
+                        y as u32,
+                        Color::from(Srgba::from_u8_array(color_utils::convert_color(
+                            buffer.read[Direction::E as usize][x][y],
+                        ))),
+                    )
+                    .unwrap();
+            }
+        }
     }
 }

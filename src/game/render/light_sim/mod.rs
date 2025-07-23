@@ -3,3 +3,4 @@ pub mod lighting;
 pub mod lights;
 pub mod lights_map;
 pub mod simulation;
+pub mod color_utils;

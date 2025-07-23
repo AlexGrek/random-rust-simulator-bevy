@@ -14,7 +14,7 @@ use crate::{
         units::{TilesCount, Units},
     }, game::render::{
         blending::{AdditiveMaterial, MultiplyBlendMaterial, ScreenBlendMaterial},
-        light_sim::{lights_map::{LightEmitterCell, LightsMapProducer}, simulation},
+        light_sim::{lights_map::LightsMapProducer, simulation},
     }, FollowCamera
 };
 
@@ -46,7 +46,7 @@ fn setup_directional_lights(app: &mut App) {
 }
 
 #[derive(Resource)]
-pub struct LightOverlayTextureHandle(Handle<Image>);
+pub struct LightOverlayTextureHandle(pub Handle<Image>);
 
 fn setup_overlay(
     mut commands: Commands,
@@ -55,11 +55,12 @@ fn setup_overlay(
     mut materials: ResMut<Assets<MultiplyBlendMaterial>>,
 ) {
     let color = css::GREY.to_u8_array();
+    let size_unscaled = (OVERLAY_IMAGE_SIZE / TILE_SIZE_IN_UNITS_UNITS) as u32;
     let image = Image::new_fill(
         // 2D image of size
         Extent3d {
-            width: OVERLAY_IMAGE_SIZE as u32,
-            height: OVERLAY_IMAGE_SIZE as u32,
+            width: size_unscaled as u32,
+            height: size_unscaled as u32,
             depth_or_array_layers: 1,
         },
         TextureDimension::D2,
