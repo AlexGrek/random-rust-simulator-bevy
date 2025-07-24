@@ -40,6 +40,31 @@ impl Sub for Point {
 }
 
 impl Point {
+    /// Creates a new `Point` from any integer-like types for x and y.
+    ///
+    /// # Arguments
+    /// * `x` - The x-coordinate, convertible to `Units` (isize).
+    /// * `y` - The y-coordinate, convertible to `Units` (isize).
+    ///
+    /// # Returns
+    /// A new `Point` instance.
+    pub fn new<T, U>(x: T, y: U) -> Self
+    where
+        T: TryInto<Units>,
+        T::Error: std::fmt::Debug, // Required for unwrap, or handle error explicitly
+        U: TryInto<Units>,
+        U::Error: std::fmt::Debug, // Required for unwrap, or handle error explicitly
+    {
+        // Using unwrap here for simplicity, but in production code, you might
+        // want to handle the error from `try_into` more gracefully,
+        // especially if converting from a very large `usize` that could
+        // overflow `isize`.
+        Self {
+            x: x.try_into().unwrap(),
+            y: y.try_into().unwrap(),
+        }
+    }
+
     /// Converts world coordinates to tile coordinates
     /// 
     /// # Arguments
@@ -92,5 +117,17 @@ impl Point {
             self.x as f32 * tile_size_f32,
             self.y as f32 * tile_size_f32,
         )
+    }
+}
+
+impl<T, U> From<(T, U)> for Point
+where
+    T: TryInto<Units>,
+    T::Error: std::fmt::Debug,
+    U: TryInto<Units>,
+    U::Error: std::fmt::Debug,
+{
+    fn from(coords: (T, U)) -> Self {
+        Point::new(coords.0, coords.1)
     }
 }
