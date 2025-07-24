@@ -10,11 +10,9 @@ use crate::{
     game::render::light_sim::lights::UndirectedLightEmitter,
 };
 
-// Passability DataProducer
 #[derive(Default, Clone)]
 pub struct LightsMapProducer;
 
-// Passability
 #[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub struct LightEmitterCell {
     pub undirected_lights: Option<UndirectedLightEmitter>,
@@ -43,9 +41,9 @@ impl MapDataProducer for LightsMapProducer {
                 let dist_from_center =
                     ((world_tile_x as f32).powi(2) + (world_tile_y as f32).powi(2)).sqrt();
 
-                let color = css::LIMEGREEN;
+                let color = css::FLORAL_WHITE;
 
-                if dist_from_center < 3.0 {
+                if dist_from_center < 1.0 {
                     info!("Created a light cell at {x}, {y} (from center: {dist_from_center})");
                     grid.set_item(
                         x,

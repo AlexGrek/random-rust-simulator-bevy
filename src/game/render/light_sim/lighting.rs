@@ -7,17 +7,15 @@ use bevy::{
 };
 
 use crate::{
-    FollowCamera,
     core::{
         basics::Point,
         chunks::insert_chunked_plugin,
         constants::TILE_SIZE_IN_UNITS_UNITS,
         units::{TilesCount, Units},
-    },
-    game::render::{
+    }, game::render::{
         blending::{AdditiveMaterial, MultiplyBlendMaterial, ScreenBlendMaterial},
-        light_sim::{lights_map::LightsMapProducer, simulation},
-    },
+        light_sim::{lights_map::LightsMapProducer, pbr_cell::PbrCellProducer, simulation},
+    }, FollowCamera
 };
 
 pub struct Lighting;
@@ -44,6 +42,7 @@ impl Plugin for Lighting {
 
 fn setup_directional_lights(app: &mut App) {
     insert_chunked_plugin(app, LightsMapProducer::default(), 100);
+    insert_chunked_plugin(app, PbrCellProducer::default(), 100);
     app.add_systems(PostUpdate, simulation::run_lights_simulation);
 }
 

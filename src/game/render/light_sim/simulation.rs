@@ -14,9 +14,9 @@ use crate::{
             color_utils,
             directions::Direction,
             lighting::{
-                LIGHTING_OVERLAY_TILES, LightOverlayMaterialHandle, LightOverlayTextureHandle, OverlayImage,
+                LightOverlayMaterialHandle, LightOverlayTextureHandle, OverlayImage, LIGHTING_OVERLAY_TILES
             },
-            lights_map::LightsMapProducer,
+            lights_map::LightsMapProducer, pbr_cell::PbrCellProducer,
         },
     },
 };
@@ -67,6 +67,7 @@ pub fn run_lights_simulation(
     light_texture_handle: Res<LightOverlayTextureHandle>,
     mut images: ResMut<Assets<Image>>,
     lightsources: Res<DataMap<LightsMapProducer>>,
+    pbr_cells: Res<DataMap<PbrCellProducer>>,
     texture_world_position: Query<&Transform, With<OverlayImage>>,
     mut buffer: Local<LightingBuffers>,
     light_material_handle: Res<LightOverlayMaterialHandle>,
@@ -119,6 +120,7 @@ pub fn run_lights_simulation(
         buffer.swap_buffers_clear_write();
 
         // dummy simulation logic - do nothing for now
+        simulate_directions(&mut buffer);
 
         // render result
         let image = images
@@ -126,42 +128,23 @@ pub fn run_lights_simulation(
             .expect("Image not found");
         for x in 0..LIGHTING_OVERLAY_TILES {
             for y in 0..LIGHTING_OVERLAY_TILES {
-                let texture_y_px = y * TILE_SIZE_IN_UNITS_UNITS as usize;
                 let total_px = LIGHTING_OVERLAY_TILES as usize;
-                if buffer.read[Direction::E as usize][x][y][0] > 0.0 {
-                    // info!(
-                    //     "We detected something: {:?} at {my_x} {my_y}: {:?}; reference color: {:?}",
-                    //     buffer.read[Direction::E as usize][x][y],
-                    //     Color::from(srgba),
-                    //     Color::from(css::LIMEGREEN)
-                    // );
-                }
-                // if buffer.read[Direction::E as usize][x][y][0] == 0 {
-                //     utils::draw_rect_on_image(
-                //         &mut image,
-                //         x * TILE_SIZE_IN_UNITS_UNITS as usize,
-                //         total_px - (texture_y_px as isize + TILE_SIZE_IN_UNITS_UNITS) as usize,
-                //         TILE_SIZE_IN_UNITS_UNITS as usize,
-                //         TILE_SIZE_IN_UNITS_UNITS as usize,
-                //         css::DARK_GREEN.to_u8_array(),
-                //     );
-                // }
-                // utils::draw_rect_on_image(
-                //     &mut image,
-                //     x * TILE_SIZE_IN_UNITS_UNITS as usize,
-                //     total_px - (texture_y_px as isize + TILE_SIZE_IN_UNITS_UNITS) as usize,
-                //     TILE_SIZE_IN_UNITS_UNITS as usize,
-                //     TILE_SIZE_IN_UNITS_UNITS as usize,
-                //     color_utils::convert_color(buffer.read[Direction::E as usize][x][y]),
-                // );
                 let color = Color::from(Srgba::from_f32_array_no_alpha(
                     buffer.read[Direction::E as usize][x][y],
                 ));
                 let x_coords = x;
                 let y_coords: isize = total_px as isize - (y as isize + 1);
-                image.set_color_at(x_coords as u32, y_coords as u32, color).unwrap();
+                image
+                    .set_color_at(x_coords as u32, y_coords as u32, color)
+                    .unwrap();
             }
         }
     }
     materials.get_mut(&light_material_handle.0);
+}
+
+fn simulate_directions(
+    mut buffer: &mut LightingBuffers
+) {
+
 }
